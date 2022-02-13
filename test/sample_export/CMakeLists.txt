@@ -1,0 +1,3 @@
+
+add_executable(sample_export ./sample_export.cpp)
+target_link_libraries(sample_export typed_matrix_exporter)

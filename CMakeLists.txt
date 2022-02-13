@@ -18,17 +18,15 @@ INCLUDE_DIRECTORIES(${typed_string_include_dirs})
 
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
 
-FILE(GLOB_RECURSE typed_matrix_BASE_SRCS ${CMAKE_SOURCE_DIR}/src/base/*.cpp)
-FILE(GLOB_RECURSE typed_matrix_LOADER_SRCS ${CMAKE_SOURCE_DIR}/src/loader/*.cpp)
+FILE(GLOB_RECURSE typed_matrix_SRCS ${CMAKE_SOURCE_DIR}/src/base/*.cpp)
 FILE(GLOB_RECURSE typed_matrix_EXPORTER_SRCS ${CMAKE_SOURCE_DIR}/src/exporter/*.cpp)
 
-add_library(typed_matrix_base ${typed_matrix_BASE_SRCS})
+add_library(typed_matrix ${typed_matrix_SRCS})
 
-add_library(typed_matrix_loader ${typed_matrix_LOADER_SRCS})
 add_library(typed_matrix_exporter ${typed_matrix_EXPORTER_SRCS})
-target_link_libraries(typed_matrix_base PUBLIC typed_string)
-target_link_libraries(typed_matrix_loader PUBLIC typed_matrix_base)
-target_link_libraries(typed_matrix_exporter PUBLIC typed_matrix_base  xlsx_reader)
+target_link_libraries(typed_matrix PUBLIC typed_string)
+target_include_directories(typed_matrix PUBLIC ${typed_string_include_dirs})
+target_link_libraries(typed_matrix_exporter PUBLIC typed_matrix  xlsx_reader)
 
 add_subdirectory(test)
 
@@ -40,7 +38,7 @@ foreach(p LIB BIN INCLUDE)
 	endif()
 endforeach()
 
-export(TARGETS typed_matrix_base typed_matrix_loader typed_matrix_exporter
+export(TARGETS typed_matrix  typed_matrix_exporter
      FILE ${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}Targets.cmake)
 
 file(WRITE
@@ -52,7 +50,7 @@ install(FILES
 		NAMESPACE typed_matrix::
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME})
 
-install(TARGETS typed_matrix_base typed_matrix_loader typed_matrix_exporter
+install(TARGETS typed_matrix  typed_matrix_exporter
  EXPORT ${PROJECT_NAME}Targets
    ARCHIVE  DESTINATION lib
    LIBRARY DESTINATION lib

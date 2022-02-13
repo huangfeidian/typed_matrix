@@ -1,9 +1,10 @@
 #include "typed_matrix.h"
 #include <iostream>
+#include "typed_string/arena_typed_string_parser.h"
 
 namespace spiritsaway::typed_matrix
 {
-	typed_matrix* typed_matrix::construct(const std::vector<matrix_header>& headers, const std::vector<std::string>& shared_string_table, const std::vector<std::vector<std::uint32_t>>& row_values)
+	typed_matrix* typed_matrix::construct(const std::vector<input_header>& headers, const std::vector<std::string>& shared_string_table, const std::vector<std::vector<std::uint32_t>>& row_values)
 	{
 		if (headers.size() >= std::numeric_limits<std::uint16_t>::max())
 		{
@@ -26,20 +27,46 @@ namespace spiritsaway::typed_matrix
 			std::cout << " header is empty" << std::endl;
 			return nullptr;
 		}
-		if (!headers[0].desc)
+		std::uint16_t row_sz = row_values.size();
+		std::uint16_t column_sz = headers.size();
+		for (std::uint16_t i = 0; i < row_values.size(); i++)
+		{
+			if (row_values[i].size() != column_sz)
+			{
+				std::cout << "row " << i << " has invalid column sz " << row_values[i].size() << std::endl;
+				return nullptr;
+			}
+		}
+		memory::arena* header_arena = new memory::arena(1024);
+
+		std::vector<column_header> typed_headers(headers.size());
+		for (int i = 0; i < headers.size(); i++)
+		{
+			typed_headers[i].comment = headers[i].comment;
+			typed_headers[i].name = headers[i].name;
+			typed_headers[i].type_str = headers[i].type_str;
+			auto cur_type_desc = container::typed_string_desc::get_type_from_str(header_arena, headers[i].type_str);
+			if (!cur_type_desc)
+			{
+				std::cout << "cant parse column " << i << " with str " << headers[i].type_str << std::endl;
+				return nullptr;
+			}
+			typed_headers[i].type_desc = cur_type_desc;
+		}
+		
+		if (!typed_headers[0].type_desc)
 		{
 			std::cout << "head desc empty" << std::endl;
 			return nullptr;
 		}
-		auto cur_row_key_type = headers[0].desc->_type;
+		auto cur_row_key_type = typed_headers[0].type_desc->m_type;
 		if (cur_row_key_type != container::basic_value_type::number_32 && cur_row_key_type != container::basic_value_type::string)
 		{
-			std::cout << "invalid row key type " << headers[0].desc->to_string() << std::endl;
+			std::cout << "invalid row key type " << typed_headers[0].type_desc->to_string() << std::endl;
 			return nullptr;
 		}
 
-		std::uint16_t row_sz = row_values.size();
-		std::uint16_t column_sz = headers.size();
+
 		std::vector<std::uint32_t> cell_strs(std::uint32_t(row_sz) * column_sz);
 		std::uint32_t sst_adjust = 0;
 		if (shared_string_table.empty() || !shared_string_table[0].empty())
@@ -56,6 +83,7 @@ namespace spiritsaway::typed_matrix
 		std::copy(shared_string_table.begin(), shared_string_table.end(), new_sst.data() + sst_adjust);
 		for (std::uint16_t i = 0; i < row_values.size(); i++)
 		{
+
 			if (cur_row_key_type == container::basic_value_type::number_32)
 			{
 				auto cur_row_key = std::stoi(shared_string_table[row_values[i][0]]);
@@ -101,38 +129,44 @@ namespace spiritsaway::typed_matrix
 		}
 		if(cur_row_key_type == container::basic_value_type::number_32)
 		{
-			auto cur_matrix = new typed_matrix(headers, new_sst, cell_strs, int_row_indexes);
+			auto cur_matrix = new typed_matrix(header_arena, typed_headers, new_sst, cell_strs, int_row_indexes);
 			return cur_matrix;
 		}
 		else
 		{
-			auto cur_matrix = new typed_matrix(headers, new_sst, cell_strs, str_row_indexes);
+			auto cur_matrix = new typed_matrix(header_arena, typed_headers, new_sst, cell_strs, str_row_indexes);
 			return cur_matrix;
 		}
 
 	}
-	typed_matrix::typed_matrix(const std::vector<matrix_header>& columns, const std::vector<std::string>& shared_string_table, const std::vector<std::uint32_t>& cell_strs, const std::unordered_map<std::string, std::uint16_t>& row_indexes)
+	typed_matrix::typed_matrix(memory::arena* header_arena, const std::vector<column_header>& columns, const std::vector<std::string>& shared_string_table, const std::vector<std::uint32_t>& cell_strs, const std::unordered_map<std::string, std::uint16_t>& row_indexes)
 		: m_row_sz(row_indexes.size())
 		, m_column_sz(columns.size())
+		, m_columns(columns)
 		, m_is_str_key(true)
 		, m_column_indexes(init_column_indexes(columns))
 		, m_shared_str_table(shared_string_table)
 		, m_cell_strs(cell_strs)
 		, m_str_row_indexes(row_indexes)
 		, m_cell_values(row_indexes.size())
+		, m_header_arena(header_arena)
+		, m_cell_value_arena(1024)
 	{
 
 	}
 
-	typed_matrix::typed_matrix(const std::vector<matrix_header>& columns, const std::vector<std::string>& shared_string_table, const std::vector<std::uint32_t>& cell_strs, const std::unordered_map<int, std::uint16_t>& row_indexes)
+	typed_matrix::typed_matrix(memory::arena* header_arena, const std::vector<column_header>& columns, const std::vector<std::string>& shared_string_table, const std::vector<std::uint32_t>& cell_strs, const std::unordered_map<int, std::uint16_t>& row_indexes)
 		: m_row_sz(row_indexes.size())
 		, m_column_sz(columns.size())
+		, m_columns(columns)
 		, m_is_str_key(false)
 		, m_column_indexes(init_column_indexes(columns))
 		, m_shared_str_table(shared_string_table)
 		, m_cell_strs(cell_strs)
 		, m_int_row_indexes(row_indexes)
 		, m_cell_values(row_indexes.size())
+		, m_header_arena(header_arena)
+		, m_cell_value_arena(1024)
 	{
 
 	}
@@ -218,26 +252,108 @@ namespace spiritsaway::typed_matrix
 	}
 	const container::arena_typed_value* typed_matrix::get_cell_safe(std::uint16_t row_idx, std::uint16_t column_idx)
 	{
+		m_read_counter++;
+
 		if (m_cell_values[row_idx].empty())
 		{
-			m_cell_values[row_idx] = std::vector< cached_cell_value>(m_column_sz);
+			m_cell_values[row_idx] = std::vector< const container::arena_typed_value*>(m_column_sz);
 		}
-		if (m_cell_values[row_idx][column_idx].value)
+		if (m_cell_values[row_idx][column_idx])
 		{
-			m_cell_values[row_idx][column_idx].counter++;
-			return m_cell_values[row_idx][column_idx].value;
+			return m_cell_values[row_idx][column_idx];
 		}
 		else
 		{
-			if (m_cell_strs[row_idx * m_column_sz + column_idx] == 0)
+			auto cur_sst_idx = m_cell_strs[std::uint32_t(row_idx) * m_column_sz + column_idx];
+			if (cur_sst_idx == 0)
 			{
 				// empty str;
 				return nullptr;
 			}
 			else
 			{
-
+				auto cur_parser = container::arena_typed_string_parser(m_cell_value_arena);
+				auto cur_cell_value = cur_parser.parse_value_with_type(m_columns[column_idx].type_desc, m_shared_str_table[cur_sst_idx]);
+				m_cell_values[row_idx][column_idx] = cur_cell_value;
+				return cur_cell_value;
 			}
 		}
+	}
+	void typed_matrix::drop_cache()
+	{
+		m_read_counter = 0;
+		for (auto& one_vec : m_cell_values)
+		{
+			one_vec.clear();
+			one_vec.shrink_to_fit();
+		}
+		m_cell_value_arena.drop();
+	}
+	typed_matrix::~typed_matrix()
+	{
+		drop_cache();
+		delete m_header_arena;
+	}
+	json typed_matrix::to_json() const
+	{
+		json result;
+		json::array_t headers(m_columns.size());
+		for (int i = 0; i < m_columns.size(); i++)
+		{
+			json::array_t cur_column_header(3);
+			cur_column_header[0] = m_columns[i].name;
+			cur_column_header[1] = m_columns[i].comment;
+			cur_column_header[2] = m_columns[i].type_str;
+			headers[i] = cur_column_header;
+		}
+
+		std::vector<std::vector<std::uint32_t>> cell_sst_indexes(m_row_sz, std::vector<std::uint32_t>(m_column_sz));
+		for (int i = 0; i < m_row_sz; i++)
+		{
+			for (int j = 0; j < m_column_sz; j++)
+			{
+				cell_sst_indexes[i][j] = m_cell_strs[i * m_column_sz + j];
+			}
+		}
+		result["headers"] = headers;
+		result["shared_str_table"] = m_shared_str_table;
+		result["row_matrix"] = cell_sst_indexes;
+		return result;
+		
+
+	}
+
+	typed_matrix* typed_matrix::from_json(const json& json_matrix)
+	{
+		std::vector<std::array<std::string, 3>> headers;
+		std::vector<std::string> shared_string_table;
+		std::vector<std::vector<std::uint32_t>> cells;
+		try
+		{
+			json_matrix.at("headers").get_to(headers);
+			json_matrix.at("share_str_table").get_to(shared_string_table);
+			json_matrix.at("row_matrix").get_to(cells);
+		}
+		catch (std::exception& e)
+		{
+			return nullptr;
+		}
+		std::vector<input_header> cur_input_header(headers.size());
+		for (int i = 0; i < headers.size(); i++)
+		{
+			cur_input_header[i].name = headers[i][0];
+			cur_input_header[i].comment = headers[i][1];
+			cur_input_header[i].type_str = headers[i][2];
+		}
+		return construct(cur_input_header, shared_string_table, cells);
+	}
+	std::unordered_map<std::string, std::uint16_t> typed_matrix::init_column_indexes(const std::vector<column_header>& in_columns)
+	{
+		std::unordered_map<std::string, std::uint16_t> result;
+		for (std::uint16_t i = 0; i < in_columns.size(); i++)
+		{
+			result[in_columns[i].name] = i;
+		}
+		return result;
 	}
 }
