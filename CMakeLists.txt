@@ -47,7 +47,6 @@ file(WRITE
 
 install(FILES
         ${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}Config.cmake
-		NAMESPACE typed_matrix::
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME})
 
 install(TARGETS typed_matrix  typed_matrix_exporter
@@ -60,4 +59,5 @@ install(TARGETS typed_matrix  typed_matrix_exporter
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include/${PROJECT_NAME})
 
 install(EXPORT ${CMAKE_PROJECT_NAME}Targets
+		NAMESPACE typed_matrix::
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME})
