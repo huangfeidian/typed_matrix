@@ -331,7 +331,7 @@ namespace spiritsaway::typed_matrix
 		try
 		{
 			json_matrix.at("headers").get_to(headers);
-			json_matrix.at("share_str_table").get_to(shared_string_table);
+			json_matrix.at("shared_str_table").get_to(shared_string_table);
 			json_matrix.at("row_matrix").get_to(cells);
 		}
 		catch (std::exception& e)

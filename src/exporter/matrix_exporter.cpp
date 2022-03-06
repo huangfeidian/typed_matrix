@@ -31,12 +31,14 @@ namespace spiritsaway::typed_matrix
 {
 	void matrix_exporter::export_workbook(const std::string& xlsx_workbook_path, const std::unordered_map<std::string, std::string>& sheet_map, const std::string& dest_folder)
 	{
+		std::cout << "begin export workbook " << xlsx_workbook_path << std::endl;
 		auto archive_content = std::make_shared<spiritsaway::xlsx_reader::archive>(xlsx_workbook_path);
 		xlsx_reader::workbook<xlsx_reader::worksheet> current_workbook(archive_content);
 		const int value_begin_row = 4; //行号从1开始 前面三行分别是name type comment
 		for (const auto& one_sheet : current_workbook._worksheets)
 		{
 			auto cur_sheet_name = one_sheet->get_name();
+			std::string debug_sheet_name = xlsx_workbook_path + ":" + std::string(cur_sheet_name);
 			auto sheet_iter = sheet_map.find(std::string(cur_sheet_name));
 			if (sheet_iter == sheet_map.end())
 			{
@@ -44,7 +46,7 @@ namespace spiritsaway::typed_matrix
 			}
 			if (one_sheet->get_max_row() < 3)
 			{
-				std::cout << " sheet " << cur_sheet_name << " row size " << one_sheet->get_max_row() << " invalid" << std::endl;
+				std::cout << " sheet " << debug_sheet_name << " row size " << one_sheet->get_max_row() << " invalid" << std::endl;
 				continue;
 			}
 			const auto& header_name_row = one_sheet->get_row(1);
@@ -58,7 +60,7 @@ namespace spiritsaway::typed_matrix
 				auto cur_header_comment = one_sheet->get_cell(3, i);
 				if (cur_header_name.empty() || cur_header_type.empty())
 				{
-					std::cout << "sheet " << cur_sheet_name << " column " << i << " has name or type empty " << cur_header_name << ": " << cur_header_type << std::endl;
+					std::cout << "sheet " << debug_sheet_name << " column " << i << " has name or type empty " << cur_header_name << ": " << cur_header_type << std::endl;
 					break;
 					cur_sheet_headers.clear();
 				}
@@ -99,10 +101,39 @@ namespace spiritsaway::typed_matrix
 			{
 				sst_vec[one_pair.second] = one_pair.first;
 			}
+
+
 			auto cur_typed_matrix = typed_matrix::construct(cur_sheet_headers, sst_vec, cur_sheet_cells);
 			if (!cur_typed_matrix)
 			{
-				std::cout << "fail to construct matrix for sheet " << cur_sheet_name << std::endl;
+				std::cout << "fail to construct matrix for sheet " << debug_sheet_name << std::endl;
+				continue;
+			}
+			bool check_valid = true;
+			for (int i = 0; i < cur_sheet_cells.size(); i++)
+			{
+				for (int j = 0; j < cur_sheet_cells[i].size(); j++)
+				{
+					if (sst_vec[cur_sheet_cells[i][j]].empty())
+					{
+						continue;
+					}
+					if (!cur_typed_matrix->get_cell(i, j))
+					{
+						std::cout << "cant parse str " << sst_vec[cur_sheet_cells[i][j]] << " with header type " << cur_sheet_headers[j].type_str << " at row "<<i + 4<<" column name  "<< cur_sheet_headers[j].name<<std::endl;
+						check_valid = false;
+						break;
+					}
+				}
+				if (!check_valid)
+				{
+					break;
+				}
+			}
+			if (!check_valid)
+			{
+				std::cout << "fail to construct matrix for sheet " << debug_sheet_name << std::endl;
+				delete cur_typed_matrix;
 				continue;
 			}
 			auto cur_matrix_json = cur_typed_matrix->to_json();
