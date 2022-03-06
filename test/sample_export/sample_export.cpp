@@ -10,6 +10,5 @@ int main()
 	};
 	std::string json_path = "../../../data/export/";
 	auto cur_exporter = spiritsaway::typed_matrix::matrix_exporter();
-	auto cur_ts = cur_exporter.export_workbook(xlsx_path, sheet_map, json_path);
-	std::cout << "cur file stamp is " << cur_ts << std::endl;
+	cur_exporter.export_workbook(xlsx_path, sheet_map, json_path);
 }

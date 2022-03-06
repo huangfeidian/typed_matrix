@@ -29,7 +29,7 @@ namespace
 
 namespace spiritsaway::typed_matrix
 {
-	std::string matrix_exporter::export_workbook(const std::string& xlsx_workbook_path, const std::unordered_map<std::string, std::string>& sheet_map, const std::string& dest_folder)
+	void matrix_exporter::export_workbook(const std::string& xlsx_workbook_path, const std::unordered_map<std::string, std::string>& sheet_map, const std::string& dest_folder)
 	{
 		auto archive_content = std::make_shared<spiritsaway::xlsx_reader::archive>(xlsx_workbook_path);
 		xlsx_reader::workbook<xlsx_reader::worksheet> current_workbook(archive_content);
@@ -118,18 +118,7 @@ namespace spiritsaway::typed_matrix
 			delete cur_typed_matrix;
 
 		}
-		auto cur_workbook_path = std::filesystem::path(xlsx_workbook_path);
-		auto ftime = std::filesystem::last_write_time(cur_workbook_path);
-		//auto cur_f_duration = std::chrono::duration_cast<std::chrono::milliseconds>(ftime.time_since_epoch());
-		//auto cur_time_t = std::chrono::system_clock::to_time_t(std::chrono::time_point<std::chrono::system_clock>(cur_f_duration));
-		auto cur_time_t = to_time_t(ftime);
-		struct tm* timeinfo;
-		char buffer[80];
-
-		timeinfo = localtime(&cur_time_t);
-
-		strftime(buffer, sizeof(buffer), "%Y_%m_%d_%H_%M_%S", timeinfo);
-		return std::string(buffer);
+		
 
 	}
 
