@@ -171,85 +171,126 @@ namespace spiritsaway::typed_matrix
 
 	}
 
-	bool typed_matrix::get_row_idx(const std::string& cur_row_key, std::uint16_t& result) const
+	typed_row typed_matrix::get_row(const std::string& cur_row_key)
 	{
+		typed_row result;
 		if (!m_is_str_key)
 		{
-			return false;
+			return result;
 		}
 		auto cur_iter = m_str_row_indexes.find(cur_row_key);
 		if (cur_iter == m_str_row_indexes.end())
 		{
-			return false;
+			return result;
 		}
-		result = cur_iter->second;
-		return true;
+		result = typed_row(this, cur_iter->second + 1);
+		return result;
 	}
-	bool typed_matrix::get_row_idx(const int& cur_row_key, std::uint16_t& result) const
+	typed_row typed_matrix::get_row(const int& cur_row_key)
 	{
+		typed_row result;
 		if (m_is_str_key)
 		{
-			return false;
+			return result;
 		}
 		auto cur_iter = m_int_row_indexes.find(cur_row_key);
 		if (cur_iter == m_int_row_indexes.end())
 		{
-			return false;
+			return result;
 		}
-		result = cur_iter->second;
-		return true;
+		result = typed_row(this, cur_iter->second + 1);
+		return result;
 	}
-	bool typed_matrix::get_column_idx(const std::string& cur_column_key, std::uint16_t& result) const
+	typed_matrix::column_index typed_matrix::get_column_idx(const std::string& cur_column_key) const
 	{
+		typed_matrix::column_index result;
 		auto cur_iter = m_column_indexes.find(cur_column_key);
 		if (cur_iter == m_column_indexes.end())
 		{
-			return false;
+			return result;
 		}
-		result = cur_iter->second;
-		return true;
+		result.set_value(cur_iter->second + 1);
+		return result;
 	}
-	const container::arena_typed_value* typed_matrix::get_cell(int row_key, const std::string& column_key)
+	const container::arena_typed_value* typed_matrix::get_cell(const typed_row& row_idx, const typed_matrix::column_index col_idx)
 	{
-		std::uint16_t cur_row_idx = 0;
-		if (!get_row_idx(row_key, cur_row_idx))
+		if (row_idx.m_matrix != this)
 		{
 			return nullptr;
 		}
-		std::uint16_t cur_column_idx = 0;
-		if (!get_column_idx(column_key, cur_column_idx))
+		if (row_idx.m_row_index == 0)
+		{
+			return nullptr;
+		}
+		if (!col_idx.valid())
+		{
+			return nullptr;
+		}
+		std::uint16_t cur_row_idx = row_idx.m_row_index - 1;
+		std::uint16_t cur_column_idx = col_idx.value() - 1;
+		if (cur_row_idx >= m_row_sz)
+		{
+			return nullptr;
+		}
+		if (cur_column_idx >= m_column_sz)
 		{
 			return nullptr;
 		}
 		return get_cell_safe(cur_row_idx, cur_column_idx);
 	}
-	const container::arena_typed_value* typed_matrix::get_cell(const std::string& row_key, const std::string& column_key)
+	const std::string& typed_matrix::get_cell_str(const typed_row& row_idx, typed_matrix::column_index col_idx) const
 	{
-		std::uint16_t cur_row_idx = 0;
-		if (!get_row_idx(row_key, cur_row_idx))
+		if (row_idx.m_matrix != this)
+		{
+			return m_shared_str_table[0];
+		}
+		if (row_idx.m_row_index == 0)
+		{
+			return m_shared_str_table[0];
+		}
+		if (!col_idx.valid())
+		{
+			return m_shared_str_table[0];
+		}
+		std::uint16_t cur_row_idx = row_idx.m_row_index - 1;
+		std::uint16_t cur_column_idx = col_idx.value() - 1;
+		if (cur_row_idx >= m_row_sz)
+		{
+			return m_shared_str_table[0];
+		}
+		if (cur_column_idx >= m_column_sz)
+		{
+			return m_shared_str_table[0];
+		}
+		auto cur_sst_idx = m_cell_strs[std::uint32_t(cur_row_idx) * m_column_sz + cur_column_idx];
+		return m_shared_str_table[cur_sst_idx];
+
+	}
+	const container::arena_typed_value* typed_matrix::get_cell(const typed_row& row_idx, const std::string& cur_column_key)
+	{
+		if (row_idx.m_matrix != this)
 		{
 			return nullptr;
 		}
-		std::uint16_t cur_column_idx = 0;
-		if (!get_column_idx(column_key, cur_column_idx))
+		if (row_idx.m_row_index == 0)
 		{
 			return nullptr;
 		}
+		auto cur_iter = m_column_indexes.find(cur_column_key);
+		if (cur_iter == m_column_indexes.end())
+		{
+			return nullptr;
+		}
+		std::uint16_t cur_row_idx = row_idx.m_row_index - 1;
+		std::uint16_t cur_column_idx = cur_iter->second;
+		if (cur_row_idx >= m_row_sz)
+		{
+			return nullptr;
+		}
+
 		return get_cell_safe(cur_row_idx, cur_column_idx);
 	}
 
-	const container::arena_typed_value* typed_matrix::get_cell(std::uint16_t row_idx, std::uint16_t column_idx)
-	{
-		if (row_idx >= m_row_sz)
-		{
-			return nullptr;
-		}
-		if (column_idx >= m_column_sz)
-		{
-			return nullptr;
-		}
-		return get_cell_safe(row_idx, column_idx);
-	}
 	const container::arena_typed_value* typed_matrix::get_cell_safe(std::uint16_t row_idx, std::uint16_t column_idx)
 	{
 		m_read_counter++;
@@ -356,4 +397,103 @@ namespace spiritsaway::typed_matrix
 		}
 		return result;
 	}
+	typed_row::typed_row()
+		: m_matrix(nullptr)
+		, m_row_index(0)
+	{
+
+	}
+	typed_matrix::column_index typed_row::get_column_idx(const std::string& cur_column_key) const
+	{
+		if (!m_matrix || !m_row_index)
+		{
+			return {};
+		}
+		else
+		{
+			return m_matrix->get_column_idx(cur_column_key);
+		}
+	}
+	const container::arena_typed_value* typed_row::get_cell(typed_matrix::column_index column_idx) const
+	{
+		if (!m_matrix)
+		{
+			return nullptr;
+		}
+		return m_matrix->get_cell(*this, column_idx);
+	}
+	const container::arena_typed_value* typed_row::get_cell(const std::string& cur_column_key) const
+	{
+		if (!m_matrix)
+		{
+			return nullptr;
+		}
+		return m_matrix->get_cell(*this, cur_column_key);
+	}
+	bool typed_row::valid() const
+	{
+		return m_matrix && m_row_index;
+	}
+	typed_row::typed_row(typed_matrix* matrix, std::uint16_t row_index)
+		: m_matrix(matrix)
+		, m_row_index(row_index)
+	{
+
+	}
+	typed_row typed_matrix::begin_row()
+	{
+		return typed_row(this, 1);
+	}
+
+	typed_row typed_matrix::next_row(const typed_row& pre_row)
+	{
+		if (!pre_row.valid())
+		{
+			return {};
+		}
+		if (pre_row.m_matrix != this)
+		{
+			return {};
+		}
+		if (pre_row.m_row_index + 1 == m_cell_values.size())
+		{
+			return {};
+		}
+		return typed_row(this, pre_row.m_row_index + 1);
+	}
+	typed_matrix::column_index typed_matrix::begin_column() const
+	{
+		column_index result;
+		if (!m_columns.empty())
+		{
+			result.set_value(1);
+		}
+		return result;
+	}
+	typed_matrix::column_index typed_matrix::next_column(typed_matrix::column_index pre_column) const
+	{
+		if (!pre_column.valid())
+		{
+			return pre_column;
+		}
+		column_index result;
+		if (pre_column.value() < m_columns.size())
+		{
+			result.set_value(pre_column.value() + 1);
+		}
+		return result;
+	}
+	const column_header* typed_matrix::get_column_header(column_index col_idx) const
+	{
+		if (!col_idx.valid())
+		{
+			return nullptr;
+		}
+		if (col_idx.value() >= m_columns.size())
+		{
+			return nullptr;
+		}
+		return &m_columns[col_idx.value() - 1];
+	}
+
 }

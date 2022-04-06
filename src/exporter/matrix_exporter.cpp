@@ -110,26 +110,28 @@ namespace spiritsaway::typed_matrix
 				continue;
 			}
 			bool check_valid = true;
-			for (int i = 0; i < cur_sheet_cells.size(); i++)
+			auto iter_row = cur_typed_matrix->begin_row();
+			while (iter_row.valid())
 			{
-				for (int j = 0; j < cur_sheet_cells[i].size(); j++)
+				auto iter_column = cur_typed_matrix->begin_column();
+				while (iter_column.valid())
 				{
-					if (sst_vec[cur_sheet_cells[i][j]].empty())
+					if (!cur_typed_matrix->get_cell_str(iter_row, iter_column).empty() && !cur_typed_matrix->get_cell(iter_row, iter_column))
 					{
-						continue;
-					}
-					if (!cur_typed_matrix->get_cell(i, j))
-					{
-						std::cout << "cant parse str " << sst_vec[cur_sheet_cells[i][j]] << " with header type " << cur_sheet_headers[j].type_str << " at row "<<i + 4<<" column name  "<< cur_sheet_headers[j].name<<std::endl;
+						const auto cur_column_header = cur_typed_matrix->get_column_header(iter_column);
+						std::cout << "cant parse str " << cur_typed_matrix->get_cell_str(iter_row, iter_column) << " with header type " << cur_column_header->type_str << " at row " << iter_row.row_index() << " column name  " << cur_column_header->name << std::endl;
 						check_valid = false;
 						break;
 					}
+					iter_column = cur_typed_matrix->next_column(iter_column);
 				}
 				if (!check_valid)
 				{
 					break;
 				}
+				iter_row = cur_typed_matrix->next_row(iter_row);
 			}
+			
 			if (!check_valid)
 			{
 				std::cout << "fail to construct matrix for sheet " << debug_sheet_name << std::endl;
