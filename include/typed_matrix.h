@@ -85,6 +85,16 @@ namespace spiritsaway::typed_matrix
 		column_index get_column_idx(const std::string& cur_column_key) const;
 		const container::arena_typed_value* get_cell(const typed_row& row_idx, column_index col_idx);
 		const container::arena_typed_value* get_cell(const typed_row& row_idx, const std::string& cur_column_key);
+		template <typename T>
+		bool get_cell(const typed_row& row_idx, column_index col_idx, T& dest)
+		{
+			auto cur_cell_v = get_cell(row_idx, col_idx);
+			if (!cur_cell_v)
+			{
+				return false;
+			}
+			return cur_cell_v->expect_value<T>(dest);
+		}
 		const std::string& get_cell_str(const typed_row& row_idx, column_index col_idx) const;
 		std::uint64_t read_counter() const
 		{
@@ -123,6 +133,15 @@ namespace spiritsaway::typed_matrix
 		{
 			return m_row_index;
 		}
-		
+		template <typename T>
+		bool get_cell(typed_matrix::column_index column_idx, T& dest)
+		{
+			auto cur_cell_v = get_cell(column_idx);
+			if (!cur_cell_v)
+			{
+				return false;
+			}
+			return cur_cell_v->expect_value<T>(dest);
+		}
 	};
 }
