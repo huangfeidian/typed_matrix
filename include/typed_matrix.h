@@ -133,15 +133,15 @@ namespace spiritsaway::typed_matrix
 		{
 			return m_row_index;
 		}
-		template <typename T>
-		bool get_cell(typed_matrix::column_index column_idx, T& dest)
+		template <typename T, typename K>
+		bool get_cell(const K&  key_or_idx, T& dest)
 		{
-			auto cur_cell_v = get_cell(column_idx);
+			auto cur_cell_v = get_cell(key_or_idx);
 			if (!cur_cell_v)
 			{
 				return false;
 			}
-			return cur_cell_v->expect_value<T>(dest);
+			return cur_cell_v->template expect_value<T>(dest);
 		}
 	};
 }
