@@ -134,7 +134,7 @@ namespace spiritsaway::typed_matrix
 			return m_row_index;
 		}
 		template <typename T, typename K>
-		bool get_cell(const K&  key_or_idx, T& dest)
+		bool expect_value(const K&  key_or_idx, T& dest)
 		{
 			auto cur_cell_v = get_cell(key_or_idx);
 			if (!cur_cell_v)
