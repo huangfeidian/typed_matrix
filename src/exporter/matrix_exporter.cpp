@@ -4,6 +4,7 @@
 #include <fstream>
 #include <filesystem>
 #include <chrono>
+#include <sstream>
 namespace
 {
 	template <typename TP>
