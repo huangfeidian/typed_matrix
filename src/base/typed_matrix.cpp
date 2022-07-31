@@ -489,7 +489,7 @@ namespace spiritsaway::typed_matrix
 		{
 			return nullptr;
 		}
-		if (col_idx.value() >= m_columns.size())
+		if (col_idx.value() > m_columns.size())
 		{
 			return nullptr;
 		}
