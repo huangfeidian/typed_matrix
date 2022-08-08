@@ -1,10 +1,9 @@
 #include "typed_matrix.h"
 #include <iostream>
-#include "typed_string/arena_typed_string_parser.h"
 
 namespace spiritsaway::typed_matrix
 {
-	typed_matrix* typed_matrix::construct(const std::vector<input_header>& headers, const std::vector<std::string>& shared_string_table, const std::vector<std::vector<std::uint32_t>>& row_values)
+	typed_matrix* typed_matrix::construct(const std::vector<input_header>& headers, const std::vector<json>& shared_json_table, const std::vector<std::vector<std::uint32_t>>& row_value_indexes)
 	{
 		if (headers.size() >= std::numeric_limits<std::uint16_t>::max())
 		{
@@ -12,14 +11,14 @@ namespace spiritsaway::typed_matrix
 			return nullptr;
 		}
 
-		if (row_values.size() >= std::numeric_limits<std::uint16_t>::max())
+		if (row_value_indexes.size() >= std::numeric_limits<std::uint16_t>::max())
 		{
-			std::cout << "row sz exceed uint16_t max with value " << row_values.size() << std::endl;
+			std::cout << "row sz exceed uint16_t max with value " << row_value_indexes.size() << std::endl;
 			return nullptr;
 		}
-		if (shared_string_table.size() >= std::numeric_limits<std::uint32_t>::max())
+		if (shared_json_table.size() >= std::numeric_limits<std::uint32_t>::max())
 		{
-			std::cout << "shared_string_table sz exceed uint32_t max with value " << shared_string_table.size() << std::endl;
+			std::cout << "shared_json_table sz exceed uint32_t max with value " << shared_json_table.size() << std::endl;
 			return nullptr;
 		}
 		if (headers.empty())
@@ -27,17 +26,9 @@ namespace spiritsaway::typed_matrix
 			std::cout << " header is empty" << std::endl;
 			return nullptr;
 		}
-		std::uint16_t row_sz = row_values.size();
+		std::uint16_t row_sz = row_value_indexes.size();
 		std::uint16_t column_sz = headers.size();
-		for (std::uint16_t i = 0; i < row_values.size(); i++)
-		{
-			if (row_values[i].size() != column_sz)
-			{
-				std::cout << "row " << i << " has invalid column sz " << row_values[i].size() << std::endl;
-				return nullptr;
-			}
-		}
-		memory::arena* header_arena = new memory::arena(1024);
+
 
 		std::vector<column_header> typed_headers(headers.size());
 		for (int i = 0; i < headers.size(); i++)
@@ -45,7 +36,7 @@ namespace spiritsaway::typed_matrix
 			typed_headers[i].comment = headers[i].comment;
 			typed_headers[i].name = headers[i].name;
 			typed_headers[i].type_str = headers[i].type_str;
-			auto cur_type_desc = container::typed_string_desc::get_type_from_str(header_arena, headers[i].type_str);
+			auto cur_type_desc = container::typed_string_desc::get_type_from_str( headers[i].type_str);
 			if (!cur_type_desc)
 			{
 				std::cout << "cant parse column " << i << " with str " << headers[i].type_str << std::endl;
@@ -60,33 +51,22 @@ namespace spiritsaway::typed_matrix
 			return nullptr;
 		}
 		auto cur_row_key_type = typed_headers[0].type_desc->m_type;
-		if (cur_row_key_type != container::basic_value_type::number_32 && cur_row_key_type != container::basic_value_type::string)
+		if (cur_row_key_type != container::basic_value_type::number_uint && cur_row_key_type != container::basic_value_type::str)
 		{
-			std::cout << "invalid row key type " << typed_headers[0].type_desc->to_string() << std::endl;
+			std::cout << "invalid row key type " << typed_headers[0].type_desc->encode() << std::endl;
 			return nullptr;
 		}
 
 
-		std::vector<std::uint32_t> cell_strs(std::uint32_t(row_sz) * column_sz);
-		std::uint32_t sst_adjust = 0;
-		if (shared_string_table.empty() || !shared_string_table[0].empty())
-		{
-			sst_adjust = 1;
-		}
-		std::vector<std::string> new_sst(shared_string_table.size() + sst_adjust);
-		if (sst_adjust)
-		{
-			new_sst[0] = std::string();
-		}
+
 		std::unordered_map<std::string, std::uint16_t> str_row_indexes;
-		std::unordered_map<int, std::uint16_t> int_row_indexes;
-		std::copy(shared_string_table.begin(), shared_string_table.end(), new_sst.data() + sst_adjust);
-		for (std::uint16_t i = 0; i < row_values.size(); i++)
+		std::unordered_map<std::uint32_t, std::uint16_t> int_row_indexes;
+		for (std::uint16_t i = 0; i < row_value_indexes.size(); i++)
 		{
 
-			if (cur_row_key_type == container::basic_value_type::number_32)
+			if (cur_row_key_type == container::basic_value_type::number_uint)
 			{
-				auto cur_row_key = std::stoi(shared_string_table[row_values[i][0]]);
+				auto cur_row_key = shared_json_table[row_value_indexes[i][0]].get<std::uint32_t>();
 				auto cur_key_iter = int_row_indexes.find(cur_row_key);
 				if (cur_key_iter == int_row_indexes.end())
 				{
@@ -101,7 +81,7 @@ namespace spiritsaway::typed_matrix
 			}
 			else
 			{
-				auto cur_row_key = shared_string_table[row_values[i][0]];
+				auto cur_row_key = shared_json_table[row_value_indexes[i][0]];
 				auto cur_key_iter = str_row_indexes.find(cur_row_key);
 				if (cur_key_iter == str_row_indexes.end())
 				{
@@ -114,63 +94,44 @@ namespace spiritsaway::typed_matrix
 				}
 
 			}
-			for (std::uint16_t j = 0; j < headers.size(); j++)
-			{
-				auto cur_sst_idx = row_values[i][j];
-				if (shared_string_table[cur_sst_idx].empty())
-				{
-					cell_strs[i * column_sz + j] = 0;
-				}
-				else
-				{
-					cell_strs[i * column_sz + j] = cur_sst_idx + sst_adjust;
-				}
-			}
 		}
-		if(cur_row_key_type == container::basic_value_type::number_32)
+		if(cur_row_key_type == container::basic_value_type::number_uint)
 		{
-			auto cur_matrix = new typed_matrix(header_arena, typed_headers, new_sst, cell_strs, int_row_indexes);
+			auto cur_matrix = new typed_matrix(typed_headers, shared_json_table, row_value_indexes, int_row_indexes);
 			return cur_matrix;
 		}
 		else
 		{
-			auto cur_matrix = new typed_matrix(header_arena, typed_headers, new_sst, cell_strs, str_row_indexes);
+			auto cur_matrix = new typed_matrix(typed_headers, shared_json_table, row_value_indexes, str_row_indexes);
 			return cur_matrix;
 		}
 
 	}
-	typed_matrix::typed_matrix(memory::arena* header_arena, const std::vector<column_header>& columns, const std::vector<std::string>& shared_string_table, const std::vector<std::uint32_t>& cell_strs, const std::unordered_map<std::string, std::uint16_t>& row_indexes)
+	typed_matrix::typed_matrix( const std::vector<column_header>& columns, const std::vector<json>& shared_json_table, const std::vector<std::vector<std::uint32_t>>& cell_value_indexes, const std::unordered_map<std::string, std::uint16_t>& row_indexes)
 		: m_row_sz(row_indexes.size())
 		, m_column_sz(columns.size())
 		, m_columns(columns)
 		, m_is_str_key(true)
 		, m_column_indexes(init_column_indexes(columns))
-		, m_shared_str_table(shared_string_table)
-		, m_cell_strs(cell_strs)
+		, m_cell_json_values(shared_json_table)
+		, m_cell_value_indexes(cell_value_indexes)
 		, m_str_row_indexes(row_indexes)
-		, m_cell_values(row_indexes.size())
-		, m_header_arena(header_arena)
-		, m_cell_value_arena(1024)
 	{
 
 	}
 
-	typed_matrix::typed_matrix(memory::arena* header_arena, const std::vector<column_header>& columns, const std::vector<std::string>& shared_string_table, const std::vector<std::uint32_t>& cell_strs, const std::unordered_map<int, std::uint16_t>& row_indexes)
+	typed_matrix::typed_matrix(const std::vector<column_header>& columns, const std::vector<json>& shared_json_table, const std::vector<std::vector<std::uint32_t>>& cell_value_indexes, const std::unordered_map<std::uint32_t, std::uint16_t>& row_indexes)
 		: m_row_sz(row_indexes.size())
 		, m_column_sz(columns.size())
 		, m_columns(columns)
 		, m_is_str_key(false)
 		, m_column_indexes(init_column_indexes(columns))
-		, m_shared_str_table(shared_string_table)
-		, m_cell_strs(cell_strs)
+		, m_cell_json_values(shared_json_table)
+		, m_cell_value_indexes(cell_value_indexes)
 		, m_int_row_indexes(row_indexes)
-		, m_cell_values(row_indexes.size())
-		, m_header_arena(header_arena)
-		, m_cell_value_arena(1024)
 	{
 
 	}
-
 	typed_row typed_matrix::get_row(const std::string& cur_row_key)
 	{
 		typed_row result;
@@ -186,7 +147,7 @@ namespace spiritsaway::typed_matrix
 		result = typed_row(this, cur_iter->second + 1);
 		return result;
 	}
-	typed_row typed_matrix::get_row(const int& cur_row_key)
+	typed_row typed_matrix::get_row(const std::uint32_t& cur_row_key)
 	{
 		typed_row result;
 		if (m_is_str_key)
@@ -212,128 +173,66 @@ namespace spiritsaway::typed_matrix
 		result.set_value(cur_iter->second + 1);
 		return result;
 	}
-	const container::arena_typed_value* typed_matrix::get_cell(const typed_row& row_idx, const typed_matrix::column_index col_idx)
+	const json& typed_matrix::get_cell_safe(const std::uint16_t& row_idx, const std::uint16_t col_idx)
+	{
+		return m_cell_json_values[m_cell_value_indexes[row_idx][col_idx]];
+	}
+	const json& typed_matrix::get_cell(const typed_row& row_idx, const typed_matrix::column_index col_idx)
 	{
 		if (row_idx.m_matrix != this)
 		{
-			return nullptr;
+			return m_cell_json_values[0];
 		}
 		if (row_idx.m_row_index == 0)
 		{
-			return nullptr;
+			return m_cell_json_values[0];
 		}
 		if (!col_idx.valid())
 		{
-			return nullptr;
+			return m_cell_json_values[0];
 		}
 		std::uint16_t cur_row_idx = row_idx.m_row_index - 1;
 		std::uint16_t cur_column_idx = col_idx.value() - 1;
 		if (cur_row_idx >= m_row_sz)
 		{
-			return nullptr;
+			return m_cell_json_values[0];
 		}
 		if (cur_column_idx >= m_column_sz)
 		{
-			return nullptr;
+			return m_cell_json_values[0];
 		}
 		return get_cell_safe(cur_row_idx, cur_column_idx);
 	}
-	const std::string& typed_matrix::get_cell_str(const typed_row& row_idx, typed_matrix::column_index col_idx) const
-	{
-		if (row_idx.m_matrix != this)
-		{
-			return m_shared_str_table[0];
-		}
-		if (row_idx.m_row_index == 0)
-		{
-			return m_shared_str_table[0];
-		}
-		if (!col_idx.valid())
-		{
-			return m_shared_str_table[0];
-		}
-		std::uint16_t cur_row_idx = row_idx.m_row_index - 1;
-		std::uint16_t cur_column_idx = col_idx.value() - 1;
-		if (cur_row_idx >= m_row_sz)
-		{
-			return m_shared_str_table[0];
-		}
-		if (cur_column_idx >= m_column_sz)
-		{
-			return m_shared_str_table[0];
-		}
-		auto cur_sst_idx = m_cell_strs[std::uint32_t(cur_row_idx) * m_column_sz + cur_column_idx];
-		return m_shared_str_table[cur_sst_idx];
 
-	}
-	const container::arena_typed_value* typed_matrix::get_cell(const typed_row& row_idx, const std::string& cur_column_key)
+	const json& typed_matrix::get_cell(const typed_row& row_idx, const std::string& cur_column_key)
 	{
 		if (row_idx.m_matrix != this)
 		{
-			return nullptr;
+			return m_cell_json_values[0];
 		}
 		if (row_idx.m_row_index == 0)
 		{
-			return nullptr;
+			return m_cell_json_values[0];
 		}
 		auto cur_iter = m_column_indexes.find(cur_column_key);
 		if (cur_iter == m_column_indexes.end())
 		{
-			return nullptr;
+			return m_cell_json_values[0];
 		}
 		std::uint16_t cur_row_idx = row_idx.m_row_index - 1;
 		std::uint16_t cur_column_idx = cur_iter->second;
 		if (cur_row_idx >= m_row_sz)
 		{
-			return nullptr;
+			return m_cell_json_values[0];
 		}
 
 		return get_cell_safe(cur_row_idx, cur_column_idx);
 	}
 
-	const container::arena_typed_value* typed_matrix::get_cell_safe(std::uint16_t row_idx, std::uint16_t column_idx)
-	{
-		m_read_counter++;
 
-		if (m_cell_values[row_idx].empty())
-		{
-			m_cell_values[row_idx] = std::vector< const container::arena_typed_value*>(m_column_sz);
-		}
-		if (m_cell_values[row_idx][column_idx])
-		{
-			return m_cell_values[row_idx][column_idx];
-		}
-		else
-		{
-			auto cur_sst_idx = m_cell_strs[std::uint32_t(row_idx) * m_column_sz + column_idx];
-			if (cur_sst_idx == 0)
-			{
-				// empty str;
-				return nullptr;
-			}
-			else
-			{
-				auto cur_parser = container::arena_typed_string_parser(m_cell_value_arena);
-				auto cur_cell_value = cur_parser.parse_value_with_type(m_columns[column_idx].type_desc, m_shared_str_table[cur_sst_idx]);
-				m_cell_values[row_idx][column_idx] = cur_cell_value;
-				return cur_cell_value;
-			}
-		}
-	}
-	void typed_matrix::drop_cache()
-	{
-		m_read_counter = 0;
-		for (auto& one_vec : m_cell_values)
-		{
-			one_vec.clear();
-			one_vec.shrink_to_fit();
-		}
-		m_cell_value_arena.drop();
-	}
 	typed_matrix::~typed_matrix()
 	{
-		drop_cache();
-		delete m_header_arena;
+
 	}
 	json typed_matrix::to_json() const
 	{
@@ -347,18 +246,9 @@ namespace spiritsaway::typed_matrix
 			cur_column_header[2] = m_columns[i].type_str;
 			headers[i] = cur_column_header;
 		}
-
-		std::vector<std::vector<std::uint32_t>> cell_sst_indexes(m_row_sz, std::vector<std::uint32_t>(m_column_sz));
-		for (int i = 0; i < m_row_sz; i++)
-		{
-			for (int j = 0; j < m_column_sz; j++)
-			{
-				cell_sst_indexes[i][j] = m_cell_strs[i * m_column_sz + j];
-			}
-		}
 		result["headers"] = headers;
-		result["shared_str_table"] = m_shared_str_table;
-		result["row_matrix"] = cell_sst_indexes;
+		result["shared_json_table"] = m_cell_json_values;
+		result["row_matrix"] = m_cell_value_indexes;
 		return result;
 		
 
@@ -367,16 +257,17 @@ namespace spiritsaway::typed_matrix
 	typed_matrix* typed_matrix::from_json(const json& json_matrix)
 	{
 		std::vector<std::array<std::string, 3>> headers;
-		std::vector<std::string> shared_string_table;
+		std::vector<json> shared_json_table;
 		std::vector<std::vector<std::uint32_t>> cells;
 		try
 		{
 			json_matrix.at("headers").get_to(headers);
-			json_matrix.at("shared_str_table").get_to(shared_string_table);
+			json_matrix.at("shared_json_table").get_to(shared_json_table);
 			json_matrix.at("row_matrix").get_to(cells);
 		}
 		catch (std::exception& e)
 		{
+			std::cout << "typed_matrix::from_json failed with err " <<e.what()<< std::endl;
 			return nullptr;
 		}
 		std::vector<input_header> cur_input_header(headers.size());
@@ -386,7 +277,23 @@ namespace spiritsaway::typed_matrix
 			cur_input_header[i].comment = headers[i][1];
 			cur_input_header[i].type_str = headers[i][2];
 		}
-		return construct(cur_input_header, shared_string_table, cells);
+		for (int i = 0; i < cells.size(); i++)
+		{
+			if (cells[i].size() != headers.size())
+			{
+				std::cout << "column sz for row " << i << " not match" << std::endl;
+				return nullptr;
+			}
+			for (int j = 0; j < headers.size(); j++)
+			{
+				if (cells[i][j] >= shared_json_table.size())
+				{
+					std::cout << "value idx for cell(" << i << "," << j << ") exceed max value size " << std::endl;
+					return nullptr;
+				}
+			}
+		}
+		return construct(cur_input_header, shared_json_table, cells);
 	}
 	std::unordered_map<std::string, std::uint16_t> typed_matrix::init_column_indexes(const std::vector<column_header>& in_columns)
 	{
@@ -414,19 +321,21 @@ namespace spiritsaway::typed_matrix
 			return m_matrix->get_column_idx(cur_column_key);
 		}
 	}
-	const container::arena_typed_value* typed_row::get_cell(typed_matrix::column_index column_idx) const
+	const json& typed_row::get_cell(typed_matrix::column_index column_idx) const
 	{
+		static const json invalid_result;
 		if (!m_matrix)
 		{
-			return nullptr;
+			return invalid_result;
 		}
 		return m_matrix->get_cell(*this, column_idx);
 	}
-	const container::arena_typed_value* typed_row::get_cell(const std::string& cur_column_key) const
+	const json& typed_row::get_cell(const std::string& cur_column_key) const
 	{
+		static const json invalid_result;
 		if (!m_matrix)
 		{
-			return nullptr;
+			return invalid_result;
 		}
 		return m_matrix->get_cell(*this, cur_column_key);
 	}
@@ -455,7 +364,7 @@ namespace spiritsaway::typed_matrix
 		{
 			return {};
 		}
-		if (pre_row.m_row_index + 1 == m_cell_values.size())
+		if (pre_row.m_row_index + 1 == m_row_sz)
 		{
 			return {};
 		}

@@ -1,6 +1,6 @@
 #include "matrix_exporter.h"
 #include <xlsx_reader/xlsx_workbook.h>
-#include <xlsx_reader/xlsx_worksheet.h>
+#include <xlsx_reader/xlsx_typed_worksheet.h>
 #include <fstream>
 #include <filesystem>
 #include <chrono>
@@ -34,10 +34,11 @@ namespace spiritsaway::typed_matrix
 	{
 		std::cout << "begin export workbook " << xlsx_workbook_path << std::endl;
 		auto archive_content = std::make_shared<spiritsaway::xlsx_reader::archive>(xlsx_workbook_path);
-		xlsx_reader::workbook<xlsx_reader::worksheet> current_workbook(archive_content);
-		const int value_begin_row = 4; //行号从1开始 前面三行分别是name type comment
-		for (const auto& one_sheet : current_workbook._worksheets)
+		xlsx_reader::workbook<xlsx_reader::typed_worksheet> current_workbook(archive_content);
+		
+		for (const auto& one_sheet : current_workbook.m_worksheets)
 		{
+			const int value_begin_row = one_sheet->value_begin_row(); //行号从1开始 前面三行分别是name type comment
 			auto cur_sheet_name = one_sheet->get_name();
 			std::string debug_sheet_name = xlsx_workbook_path + ":" + std::string(cur_sheet_name);
 			auto sheet_iter = sheet_map.find(std::string(cur_sheet_name));
@@ -73,72 +74,23 @@ namespace spiritsaway::typed_matrix
 			{
 				continue;
 			}
-			std::unordered_map<std::string, std::uint32_t> cur_sheet_shared_string_table;
-			cur_sheet_shared_string_table[std::string()] = 0;
-			std::vector<std::vector<std::uint32_t>> cur_sheet_cells(one_sheet->get_max_row() - value_begin_row + 1, std::vector<std::uint32_t>(header_name_row.size() - 1));
-			for (int i = 4; i < one_sheet->get_max_row() + 1; i++)
+			
+			
+			std::vector<std::vector<std::uint32_t>> temp_cell_value_matrix(one_sheet->get_max_row() - one_sheet->value_begin_row() + 1, std::vector<std::uint32_t>(cur_sheet_headers.size(), 0));
+			for (int i = one_sheet->value_begin_row(); i <= one_sheet->max_rows; i++)
 			{
-				const auto& cur_row_info = one_sheet->get_row(i);
-				for (int j = 1; j < header_name_row.size(); j++)
+				for (int j = 1; j < one_sheet->max_columns; j++)
 				{
-					auto cur_cell_str = std::string(current_workbook.get_shared_string(cur_row_info[j]));
-					auto cur_cell_str_iter = cur_sheet_shared_string_table.find(cur_cell_str);
-					std::uint32_t new_shared_str_idx = 0;
-					if (cur_cell_str_iter == cur_sheet_shared_string_table.end())
-					{
-						new_shared_str_idx = cur_sheet_shared_string_table.size();
-						cur_sheet_shared_string_table[cur_cell_str] = new_shared_str_idx;
-					}
-					else
-					{
-						new_shared_str_idx = cur_cell_str_iter->second;
-					}
-					cur_sheet_cells[i - 4][j - 1] = new_shared_str_idx;
+					temp_cell_value_matrix[i - one_sheet->value_begin_row()][j - 1] = one_sheet->cell_value_indexes()[one_sheet->get_cell_value_index_pos(i, j)];
 				}
-
 			}
-			std::vector<std::string> sst_vec(cur_sheet_shared_string_table.size());
-			for (const auto& one_pair : cur_sheet_shared_string_table)
-			{
-				sst_vec[one_pair.second] = one_pair.first;
-			}
-
-
-			auto cur_typed_matrix = typed_matrix::construct(cur_sheet_headers, sst_vec, cur_sheet_cells);
+			auto cur_typed_matrix = typed_matrix::construct(cur_sheet_headers, one_sheet->cell_json_values(), temp_cell_value_matrix);
 			if (!cur_typed_matrix)
 			{
 				std::cout << "fail to construct matrix for sheet " << debug_sheet_name << std::endl;
 				continue;
 			}
-			bool check_valid = true;
-			auto iter_row = cur_typed_matrix->begin_row();
-			while (iter_row.valid())
-			{
-				auto iter_column = cur_typed_matrix->begin_column();
-				while (iter_column.valid())
-				{
-					if (!cur_typed_matrix->get_cell_str(iter_row, iter_column).empty() && !cur_typed_matrix->get_cell(iter_row, iter_column))
-					{
-						const auto cur_column_header = cur_typed_matrix->get_column_header(iter_column);
-						std::cout << "cant parse str " << cur_typed_matrix->get_cell_str(iter_row, iter_column) << " with header type " << cur_column_header->type_str << " at row " << iter_row.row_index() << " column name  " << cur_column_header->name << std::endl;
-						check_valid = false;
-						break;
-					}
-					iter_column = cur_typed_matrix->next_column(iter_column);
-				}
-				if (!check_valid)
-				{
-					break;
-				}
-				iter_row = cur_typed_matrix->next_row(iter_row);
-			}
-			
-			if (!check_valid)
-			{
-				std::cout << "fail to construct matrix for sheet " << debug_sheet_name << std::endl;
-				delete cur_typed_matrix;
-				continue;
-			}
+
 			auto cur_matrix_json = cur_typed_matrix->to_json();
 			auto dest_file_path = dest_folder + sheet_iter->second;
 			auto cur_json_str = cur_matrix_json.dump(4);
