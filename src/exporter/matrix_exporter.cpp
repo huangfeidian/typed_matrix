@@ -79,7 +79,7 @@ namespace spiritsaway::typed_matrix
 			std::vector<std::vector<std::uint32_t>> temp_cell_value_matrix(one_sheet->get_max_row() - one_sheet->value_begin_row() + 1, std::vector<std::uint32_t>(cur_sheet_headers.size(), 0));
 			for (int i = one_sheet->value_begin_row(); i <= one_sheet->max_rows; i++)
 			{
-				for (int j = 1; j < one_sheet->max_columns; j++)
+				for (int j = 1; j <= one_sheet->max_columns; j++)
 				{
 					temp_cell_value_matrix[i - one_sheet->value_begin_row()][j - 1] = one_sheet->cell_value_indexes()[one_sheet->get_cell_value_index_pos(i, j)];
 				}
