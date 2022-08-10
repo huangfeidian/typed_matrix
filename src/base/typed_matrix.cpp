@@ -132,7 +132,7 @@ namespace spiritsaway::typed_matrix
 	{
 
 	}
-	typed_row typed_matrix::get_row(const std::string& cur_row_key)
+	typed_row typed_matrix::get_row(const std::string& cur_row_key) const
 	{
 		typed_row result;
 		if (!m_is_str_key)
@@ -147,7 +147,7 @@ namespace spiritsaway::typed_matrix
 		result = typed_row(this, cur_iter->second + 1);
 		return result;
 	}
-	typed_row typed_matrix::get_row(const std::uint32_t& cur_row_key)
+	typed_row typed_matrix::get_row(const std::uint32_t& cur_row_key)const
 	{
 		typed_row result;
 		if (m_is_str_key)
@@ -173,11 +173,11 @@ namespace spiritsaway::typed_matrix
 		result.set_value(cur_iter->second + 1);
 		return result;
 	}
-	const json& typed_matrix::get_cell_safe(const std::uint16_t& row_idx, const std::uint16_t col_idx)
+	const json& typed_matrix::get_cell_safe(const std::uint16_t& row_idx, const std::uint16_t col_idx)const
 	{
 		return m_cell_json_values[m_cell_value_indexes[row_idx][col_idx]];
 	}
-	const json& typed_matrix::get_cell(const typed_row& row_idx, const typed_matrix::column_index col_idx)
+	const json& typed_matrix::get_cell(const typed_row& row_idx, const typed_matrix::column_index col_idx) const
 	{
 		if (row_idx.m_matrix != this)
 		{
@@ -204,7 +204,7 @@ namespace spiritsaway::typed_matrix
 		return get_cell_safe(cur_row_idx, cur_column_idx);
 	}
 
-	const json& typed_matrix::get_cell(const typed_row& row_idx, const std::string& cur_column_key)
+	const json& typed_matrix::get_cell(const typed_row& row_idx, const std::string& cur_column_key) const
 	{
 		if (row_idx.m_matrix != this)
 		{
@@ -343,18 +343,18 @@ namespace spiritsaway::typed_matrix
 	{
 		return m_matrix && m_row_index;
 	}
-	typed_row::typed_row(typed_matrix* matrix, std::uint16_t row_index)
+	typed_row::typed_row(const typed_matrix* matrix, std::uint16_t row_index)
 		: m_matrix(matrix)
 		, m_row_index(row_index)
 	{
 
 	}
-	typed_row typed_matrix::begin_row()
+	typed_row typed_matrix::begin_row() const
 	{
 		return typed_row(this, 1);
 	}
 
-	typed_row typed_matrix::next_row(const typed_row& pre_row)
+	typed_row typed_matrix::next_row(const typed_row& pre_row) const
 	{
 		if (!pre_row.valid())
 		{

@@ -60,6 +60,7 @@ namespace spiritsaway::typed_matrix
 	private:
 		typed_matrix(const std::vector<column_header>& columns, const std::vector<json>& shared_json_table, const std::vector<std::vector<std::uint32_t>>& cell_value_indexes, const std::unordered_map<std::string, std::uint16_t>& row_indexes);
 		typed_matrix(const std::vector<column_header>& columns, const std::vector<json>& shared_json_table, const std::vector<std::vector<std::uint32_t>>& cell_value_indexes, const std::unordered_map<std::uint32_t, std::uint16_t>& row_indexes);
+		const json& get_cell_safe(const std::uint16_t& row_idx, const std::uint16_t col_idx) const;
 	public:
 		const std::uint16_t m_row_sz;
 		const std::uint16_t m_column_sz;
@@ -75,14 +76,14 @@ namespace spiritsaway::typed_matrix
 		static std::unordered_map<std::string, std::uint16_t> init_column_indexes(const std::vector<column_header>& in_columns);
 		static typed_matrix* construct(const std::vector<input_header>& headers, const std::vector<json>& shared_json_table, const std::vector<std::vector<std::uint32_t>>& row_values);
 
-		typed_row get_row(const std::string& cur_row_key);
-		typed_row get_row(const std::uint32_t& cur_row_key);
+		typed_row get_row(const std::string& cur_row_key) const;
+		typed_row get_row(const std::uint32_t& cur_row_key) const;
 		column_index get_column_idx(const std::string& cur_column_key) const;
-		const json& get_cell_safe(const std::uint16_t& row_idx, const std::uint16_t col_idx);
-		const json& get_cell(const typed_row& row_idx, column_index col_idx);
-		const json& get_cell(const typed_row& row_idx, const std::string& cur_column_key);
+		
+		const json& get_cell(const typed_row& row_idx, column_index col_idx) const;
+		const json& get_cell(const typed_row& row_idx, const std::string& cur_column_key) const;
 		template <typename T>
-		bool get_cell(const typed_row& row_idx, column_index col_idx, T& dest)
+		bool get_cell(const typed_row& row_idx, column_index col_idx, T& dest) const
 		{
 			auto cur_cell_v = get_cell(row_idx, col_idx);
 			if (!cur_cell_v)
@@ -92,8 +93,8 @@ namespace spiritsaway::typed_matrix
 			
 			return serialize::decode(cur_cell_v, dest);
 		}
-		typed_row begin_row();
-		typed_row next_row(const typed_row& pre_row);
+		typed_row begin_row() const;
+		typed_row next_row(const typed_row& pre_row) const;
 		column_index begin_column() const;
 		column_index next_column(column_index pre_column) const;
 		const column_header* get_column_header(column_index col_idx) const;
@@ -104,14 +105,14 @@ namespace spiritsaway::typed_matrix
 
 	class typed_row
 	{
-		typed_matrix* m_matrix;
+		const typed_matrix* m_matrix;
 		std::uint16_t m_row_index;
 		friend class typed_matrix;
-		typed_row(typed_matrix* matrix, std::uint16_t row_index);
+		typed_row(const typed_matrix* matrix, std::uint16_t row_index);
 	public:
 		bool valid() const;
 		typed_row();
-		typed_matrix* matrix() const
+		const typed_matrix* matrix() const
 		{
 			return m_matrix;
 		}
