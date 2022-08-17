@@ -129,7 +129,7 @@ namespace spiritsaway::typed_matrix
 		bool expect_value(const K&  key_or_idx, T& dest)
 		{
 			auto cur_cell_v = get_cell(key_or_idx);
-			if (!cur_cell_v)
+			if (cur_cell_v.is_null())
 			{
 				return false;
 			}
