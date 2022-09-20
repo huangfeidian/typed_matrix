@@ -30,7 +30,7 @@ namespace
 
 namespace spiritsaway::typed_matrix
 {
-	void matrix_exporter::export_workbook(const std::string& xlsx_workbook_path, const std::unordered_map<std::string, std::string>& sheet_map, const std::string& dest_folder)
+	void matrix_exporter::export_workbook(const std::string& xlsx_workbook_path, const std::unordered_map<std::string, std::string>& sheet_map, const std::string& dest_folder, bool with_comments)
 	{
 		std::cout << "begin export workbook " << xlsx_workbook_path << std::endl;
 		auto archive_content = std::make_shared<spiritsaway::xlsx_reader::archive>(xlsx_workbook_path);
@@ -90,10 +90,19 @@ namespace spiritsaway::typed_matrix
 				std::cout << "fail to construct matrix for sheet " << debug_sheet_name << std::endl;
 				continue;
 			}
-
-			auto cur_matrix_json = cur_typed_matrix->to_json();
+			std::string cur_json_str;
+			if (with_comments)
+			{
+				cur_json_str = cur_typed_matrix->to_comment_json();
+			}
+			else
+			{
+				auto cur_matrix_json = cur_typed_matrix->to_json();
+				cur_json_str = cur_matrix_json.dump(1, '\t');
+			}
+			
 			auto dest_file_path = dest_folder + sheet_iter->second;
-			auto cur_json_str = cur_matrix_json.dump(4);
+			
 			auto pre_file_str = load_file_content(dest_file_path);
 			if (cur_json_str != pre_file_str)
 			{

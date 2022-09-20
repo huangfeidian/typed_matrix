@@ -1,5 +1,6 @@
 #include "typed_matrix.h"
 #include <iostream>
+#include <sstream>
 
 namespace spiritsaway::typed_matrix
 {
@@ -252,6 +253,54 @@ namespace spiritsaway::typed_matrix
 		return result;
 		
 
+	}
+
+	std::string typed_matrix::to_comment_json() const
+	{
+		std::ostringstream cur_oss;
+		cur_oss << "{\n";
+		cur_oss << "\t\"headers\": ";
+		json::array_t headers(m_columns.size());
+		for (int i = 0; i < m_columns.size(); i++)
+		{
+			json::array_t cur_column_header(3);
+			cur_column_header[0] = m_columns[i].name;
+			cur_column_header[1] = m_columns[i].comment;
+			cur_column_header[2] = m_columns[i].type_str;
+			headers[i] = cur_column_header;
+		}
+		cur_oss << json(headers).dump(1, '\t') << ",\n";
+
+		cur_oss << "\t\"shared_json_table\": "<<json(m_cell_json_values).dump(1, '\t') << "," << std::endl;
+
+		cur_oss << "\t\"row_matrix\": [\n";
+		for (int i = 0; i < m_cell_value_indexes.size(); i++)
+		{
+			cur_oss << "\t\t[\n";
+			for (int j = 0; j < m_cell_value_indexes[i].size(); j++)
+			{
+				if (j + 1 == m_cell_value_indexes[i].size())
+				{
+					cur_oss << "\t\t\t" << m_cell_value_indexes[i][j] << " // (" << m_columns[j].name << ", " << m_cell_json_values[m_cell_value_indexes[i][j]].dump() <<")\n";
+				}
+				else
+				{
+					cur_oss << "\t\t\t" << m_cell_value_indexes[i][j] << ", // (" << m_columns[j].name << ", " << m_cell_json_values[m_cell_value_indexes[i][j]].dump() << ")\n";
+				}
+				
+				
+			}
+			if (i + 1== m_cell_value_indexes.size())
+			{
+				cur_oss << "\t\t]\n";
+			}
+			else
+			{
+				cur_oss << "\t\t],\n";
+			}
+		}
+		cur_oss << "\t]\n}";
+		return cur_oss.str();
 	}
 
 	typed_matrix* typed_matrix::from_json(const json& json_matrix)

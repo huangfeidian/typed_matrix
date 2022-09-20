@@ -100,6 +100,7 @@ namespace spiritsaway::typed_matrix
 		const column_header* get_column_header(column_index col_idx) const;
 		~typed_matrix();
 		json to_json() const;
+		std::string to_comment_json() const;
 		static typed_matrix* from_json(const json& json_matrix);
 	};
 

@@ -7,7 +7,7 @@ namespace spiritsaway::typed_matrix
 	{
 	public:
 
-		void export_workbook(const std::string& xlsx_workbook_path, const std::unordered_map<std::string, std::string>& sheet_map, const std::string& dest_folder);
+		void export_workbook(const std::string& xlsx_workbook_path, const std::unordered_map<std::string, std::string>& sheet_map, const std::string& dest_folder, bool with_comments = false);
 
 	};
 }
