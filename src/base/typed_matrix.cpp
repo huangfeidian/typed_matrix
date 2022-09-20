@@ -413,7 +413,7 @@ namespace spiritsaway::typed_matrix
 		{
 			return {};
 		}
-		if (pre_row.m_row_index + 1 == m_row_sz)
+		if (pre_row.m_row_index  == m_row_sz)
 		{
 			return {};
 		}
