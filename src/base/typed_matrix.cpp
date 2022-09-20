@@ -250,6 +250,7 @@ namespace spiritsaway::typed_matrix
 		result["headers"] = headers;
 		result["shared_json_table"] = m_cell_json_values;
 		result["row_matrix"] = m_cell_value_indexes;
+		result["extras"] = json::array_t{};
 		return result;
 		
 
@@ -272,7 +273,7 @@ namespace spiritsaway::typed_matrix
 		cur_oss << json(headers).dump(1, '\t') << ",\n";
 
 		cur_oss << "\t\"shared_json_table\": "<<json(m_cell_json_values).dump(1, '\t') << "," << std::endl;
-
+		cur_oss << "\t\"extras\" : [],\n";
 		cur_oss << "\t\"row_matrix\": [\n";
 		for (int i = 0; i < m_cell_value_indexes.size(); i++)
 		{
@@ -308,11 +309,13 @@ namespace spiritsaway::typed_matrix
 		std::vector<std::array<std::string, 3>> headers;
 		std::vector<json> shared_json_table;
 		std::vector<std::vector<std::uint32_t>> cells;
+		std::vector<std::array<json, 3>> extras;
 		try
 		{
 			json_matrix.at("headers").get_to(headers);
 			json_matrix.at("shared_json_table").get_to(shared_json_table);
 			json_matrix.at("row_matrix").get_to(cells);
+			json_matrix.at("extras").get_to(extras);
 		}
 		catch (std::exception& e)
 		{
@@ -320,12 +323,16 @@ namespace spiritsaway::typed_matrix
 			return nullptr;
 		}
 		std::vector<input_header> cur_input_header(headers.size());
+		std::unordered_map<std::string, std::uint32_t> header_to_idx;
 		for (int i = 0; i < headers.size(); i++)
 		{
 			cur_input_header[i].name = headers[i][0];
 			cur_input_header[i].comment = headers[i][1];
 			cur_input_header[i].type_str = headers[i][2];
+			header_to_idx[headers[i][0]] = i;
 		}
+		std::unordered_map<std::string, std::uint32_t> str_key_indexes;
+		std::unordered_map<std::uint32_t, std::uint32_t> int_key_indexes;
 		for (int i = 0; i < cells.size(); i++)
 		{
 			if (cells[i].size() != headers.size())
@@ -340,6 +347,49 @@ namespace spiritsaway::typed_matrix
 					std::cout << "value idx for cell(" << i << "," << j << ") exceed max value size " << std::endl;
 					return nullptr;
 				}
+			}
+			const auto& cur_row_key = shared_json_table[cells[i][0]];
+			if (cur_row_key.is_string())
+			{
+				str_key_indexes[cur_row_key.get<std::string>()] = i;
+			}
+			else
+			{
+				int_key_indexes[cur_row_key.get<std::uint32_t>()] = i;
+			}
+		}
+		for (const auto& one_extra : extras)
+		{
+			if (!one_extra[1].is_string())
+			{
+				continue;
+			}
+			auto cur_column_iter = header_to_idx.find(one_extra[1].get<std::string>());
+
+			if (one_extra[0].is_string())
+			{
+				auto cur_row_iter = str_key_indexes.find(one_extra[0].get<std::string>());
+				if (cur_row_iter == str_key_indexes.end())
+				{
+					continue;
+				}
+				shared_json_table.push_back(one_extra[2]);
+				cells[cur_row_iter->second][cur_column_iter->second] = shared_json_table.size() - 1;
+				
+			}
+			else if (one_extra[0].is_number_unsigned())
+			{
+				auto cur_row_iter = int_key_indexes.find(one_extra[0].get<std::uint32_t>());
+				if (cur_row_iter == int_key_indexes.end())
+				{
+					continue;
+				}
+				shared_json_table.push_back(one_extra[2]);
+				cells[cur_row_iter->second][cur_column_iter->second] = shared_json_table.size() - 1;
+			}
+			else
+			{
+				continue;
 			}
 		}
 		return construct(cur_input_header, shared_json_table, cells);
