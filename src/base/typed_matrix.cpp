@@ -373,8 +373,16 @@ namespace spiritsaway::typed_matrix
 				{
 					continue;
 				}
-				shared_json_table.push_back(one_extra[2]);
-				cells[cur_row_iter->second][cur_column_iter->second] = shared_json_table.size() - 1;
+				if (one_extra[2].is_null())
+				{
+					cells[cur_row_iter->second][cur_column_iter->second] = 0;
+				}
+				else
+				{
+					shared_json_table.push_back(one_extra[2]);
+					cells[cur_row_iter->second][cur_column_iter->second] = shared_json_table.size() - 1;
+				}
+				
 				
 			}
 			else if (one_extra[0].is_number_unsigned())
@@ -384,8 +392,15 @@ namespace spiritsaway::typed_matrix
 				{
 					continue;
 				}
-				shared_json_table.push_back(one_extra[2]);
-				cells[cur_row_iter->second][cur_column_iter->second] = shared_json_table.size() - 1;
+				if (one_extra[2].is_null())
+				{
+					cells[cur_row_iter->second][cur_column_iter->second] = 0;
+				}
+				else
+				{
+					shared_json_table.push_back(one_extra[2]);
+					cells[cur_row_iter->second][cur_column_iter->second] = shared_json_table.size() - 1;
+				}
 			}
 			else
 			{
