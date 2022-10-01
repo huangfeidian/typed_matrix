@@ -203,6 +203,38 @@ namespace spiritsaway::typed_matrix
 		return;
 
 	}
+
+	void typed_matrix::get_values_for_row(const typed_row& row_idx, const std::string& name_preifx, std::vector<std::pair<const column_header*, const json*>>& non_empty_values) const
+	{
+		non_empty_values.clear();
+		if (row_idx.m_matrix != this)
+		{
+			return;
+		}
+		if (row_idx.m_row_index == 0)
+		{
+			return;
+		}
+		std::uint16_t cur_row_idx = row_idx.m_row_index - 1;
+
+		for (std::uint16_t i = 0; i < m_cell_value_indexes[cur_row_idx].size(); i++)
+		{
+			auto cur_cell_idx = m_cell_value_indexes[cur_row_idx][i];
+			if (!cur_cell_idx)
+			{
+				continue;
+			}
+			
+			if (m_columns[i].name.rfind(name_preifx, 0) != 0)
+			{
+				continue;
+			}
+			non_empty_values.emplace_back(&m_columns[i], &m_cell_json_values[cur_cell_idx]);
+		}
+		return;
+
+	}
+
 	const json& typed_matrix::get_cell(const typed_row& row_idx, const typed_matrix::column_index col_idx) const
 	{
 		if (row_idx.m_matrix != this)

@@ -83,6 +83,7 @@ namespace spiritsaway::typed_matrix
 		const json& get_cell(const typed_row& row_idx, column_index col_idx) const;
 		const json& get_cell(const typed_row& row_idx, const std::string& cur_column_key) const;
 		void get_values_for_row(const typed_row& row_idx, std::vector<std::pair<const column_header*, const json*>>& non_empty_values) const;
+		void get_values_for_row(const typed_row& row_idx, const std::string& name_preifx, std::vector<std::pair<const column_header*, const json*>>& non_empty_values) const;
 		template <typename T>
 		bool get_cell(const typed_row& row_idx, column_index col_idx, T& dest) const
 		{
