@@ -145,5 +145,12 @@ namespace spiritsaway::typed_matrix
 			m_matrix->get_values_for_row(*this, result);
 			return result;
 		}
+		std::vector<std::pair<const column_header*, const json*>> get_values(const std::string& name_prefix) const
+		{
+			std::vector<std::pair<const column_header*, const json*>> result;
+			result.reserve(m_matrix->m_columns.size());
+			m_matrix->get_values_for_row(*this, name_prefix, result);
+			return result;
+		}
 	};
 }
