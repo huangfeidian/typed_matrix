@@ -128,10 +128,20 @@ namespace spiritsaway::typed_matrix
 		{
 			return m_row_index;
 		}
-		template <typename T, typename K>
-		bool expect_value(const K&  key_or_idx, T& dest)
+		template <typename T>
+		bool expect_value(const std::string&  key, T& dest)
 		{
-			auto cur_cell_v = get_cell(key_or_idx);
+			auto cur_cell_v = get_cell(key);
+			if (cur_cell_v.is_null())
+			{
+				return false;
+			}
+			return serialize::decode(cur_cell_v, dest);
+		}
+		template <typename T>
+		bool expect_value(typed_matrix::column_index  col_idx, T& dest)
+		{
+			auto cur_cell_v = get_cell(col_idx);
 			if (cur_cell_v.is_null())
 			{
 				return false;
