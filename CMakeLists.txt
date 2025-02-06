@@ -17,10 +17,10 @@ FIND_PACKAGE(nlohmann_json CONFIG REQUIRED)
 
 INCLUDE_DIRECTORIES(${typed_string_include_dirs})
 
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-FILE(GLOB_RECURSE typed_matrix_SRCS ${CMAKE_SOURCE_DIR}/src/base/*.cpp)
-FILE(GLOB_RECURSE typed_matrix_EXPORTER_SRCS ${CMAKE_SOURCE_DIR}/src/exporter/*.cpp)
+FILE(GLOB_RECURSE typed_matrix_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/src/base/*.cpp)
+FILE(GLOB_RECURSE typed_matrix_EXPORTER_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/src/exporter/*.cpp)
 
 add_library(typed_matrix ${typed_matrix_SRCS})
 
@@ -57,7 +57,7 @@ install(TARGETS typed_matrix  typed_matrix_exporter
     RUNTIME DESTINATION bin
   )
 
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include/${PROJECT_NAME})
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ DESTINATION include/${PROJECT_NAME})
 
 install(EXPORT ${PROJECT_NAME}Targets
 		NAMESPACE typed_matrix::
