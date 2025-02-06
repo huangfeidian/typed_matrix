@@ -40,15 +40,15 @@ foreach(p LIB BIN INCLUDE)
 endforeach()
 
 export(TARGETS typed_matrix  typed_matrix_exporter
-     FILE ${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}Targets.cmake)
+     FILE ${CMAKE_BINARY_DIR}/${PROJECT_NAME}Targets.cmake)
 
 file(WRITE
-    ${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}Config.cmake
-    "include(\${CMAKE_CURRENT_LIST_DIR}/${CMAKE_PROJECT_NAME}Targets.cmake)\n")
+    ${CMAKE_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+    "include(\${CMAKE_CURRENT_LIST_DIR}/${PROJECT_NAME}Targets.cmake)\n")
 
 install(FILES
-        ${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}Config.cmake
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME})
+        ${CMAKE_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
 
 install(TARGETS typed_matrix  typed_matrix_exporter
  EXPORT ${PROJECT_NAME}Targets
@@ -59,6 +59,6 @@ install(TARGETS typed_matrix  typed_matrix_exporter
 
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include/${PROJECT_NAME})
 
-install(EXPORT ${CMAKE_PROJECT_NAME}Targets
+install(EXPORT ${PROJECT_NAME}Targets
 		NAMESPACE typed_matrix::
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME})
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
