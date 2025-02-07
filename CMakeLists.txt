@@ -29,6 +29,14 @@ target_link_libraries(typed_matrix PUBLIC typed_string)
 target_include_directories(typed_matrix PUBLIC ${typed_string_include_dirs})
 target_link_libraries(typed_matrix_exporter PUBLIC typed_matrix  xlsx_reader)
 
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+  set(IS_TOPLEVEL_PROJECT TRUE)
+else()
+  set(IS_TOPLEVEL_PROJECT FALSE)
+endif()
+
+if(IS_TOPLEVEL_PROJECT)
+
 add_subdirectory(test)
 
 foreach(p LIB BIN INCLUDE)
@@ -62,3 +70,5 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ DESTINATION include/${PRO
 install(EXPORT ${PROJECT_NAME}Targets
 		NAMESPACE typed_matrix::
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
+
+endif(IS_TOPLEVEL_PROJECT)
